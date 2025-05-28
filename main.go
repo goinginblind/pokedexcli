@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
+
+	"github.com/goinginblind/pokedexcli/internal/pokeapi"
 )
 
 func main() {
@@ -47,6 +47,7 @@ type cliCommand struct {
 
 var commands = map[string]cliCommand{}
 
+// initializes commands map
 func init() {
 	commands["help"] = cliCommand{
 		name:        "help",
@@ -70,13 +71,14 @@ func init() {
 	}
 }
 
-// their functions
+// quits
 func commandExit(inp *config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
+// prints a help message
 func commandHelp(inp *config) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
@@ -88,12 +90,13 @@ func commandHelp(inp *config) error {
 	return nil
 }
 
-// map functionality
+// config contains two fields with urls for prev and next pages
 type config struct {
 	Next     string
 	Previous string
 }
 
+// print next page
 func printNextMapPage(inp *config) error {
 	var fetchUrl string
 	if inp.Next == "" {
@@ -101,20 +104,10 @@ func printNextMapPage(inp *config) error {
 	} else {
 		fetchUrl = inp.Next
 	}
-	res, err := http.Get(fetchUrl)
-	if err != nil {
-		return fmt.Errorf("could not get response body: %v", err)
-	}
-	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %v", res.StatusCode)
-	}
-
-	var decodedRes LocationAreaResponse
-	err = json.NewDecoder(res.Body).Decode(&decodedRes)
+	decodedRes, err := pokeapi.FetchLocRes(fetchUrl)
 	if err != nil {
-		return fmt.Errorf("could not decode response: %v", err)
+		return fmt.Errorf("%v: could not fetch a response", err)
 	}
 
 	for _, entry := range decodedRes.Results {
@@ -127,6 +120,7 @@ func printNextMapPage(inp *config) error {
 	return nil
 }
 
+// print prev page
 func printPrevMapPage(inp *config) error {
 	var fetchUrl string
 	if inp.Previous == "" {
@@ -136,16 +130,9 @@ func printPrevMapPage(inp *config) error {
 		fetchUrl = inp.Previous
 	}
 
-	res, err := http.Get(fetchUrl)
+	decodedRes, err := pokeapi.FetchLocRes(fetchUrl)
 	if err != nil {
-		return fmt.Errorf("could not get response body: %v", err)
-	}
-	defer res.Body.Close()
-
-	var decodedRes LocationAreaResponse
-	err = json.NewDecoder(res.Body).Decode(&decodedRes)
-	if err != nil {
-		return fmt.Errorf("could not decode response: %v", err)
+		return fmt.Errorf("%v: could not fetch a response", err)
 	}
 
 	for _, entry := range decodedRes.Results {
