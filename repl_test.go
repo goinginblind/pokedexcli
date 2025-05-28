@@ -29,22 +29,19 @@ func TestCleanInput(t *testing.T) {
 		// add more cases here
 	}
 
-	var successes int = 0
 	for _, c := range cases {
-		actual := CleanInput(c.input)
-		if len(actual) != len(c.expected) {
-			t.Errorf("expected length: %v - got: %v", len(c.expected), len(actual))
-			t.Fail()
-		}
-
-		for i := range actual {
-			actualWord, expectedWord := actual[i], c.expected[i]
-			if actualWord != expectedWord {
-				t.Errorf("expected: %v - got: %v", expectedWord, actualWord)
-				t.Fail()
+		t.Run(fmt.Sprintf("input: %v", c.input), func(t *testing.T) {
+			actual := CleanInput(c.input)
+			if len(actual) != len(c.expected) {
+				t.Errorf("expected length: %v - got: %v", len(c.expected), len(actual))
 			}
-		}
-		successes++
+
+			for i := range actual {
+				actualWord, expectedWord := actual[i], c.expected[i]
+				if actualWord != expectedWord {
+					t.Errorf("expected: %v - got: %v", expectedWord, actualWord)
+				}
+			}
+		})
 	}
-	fmt.Printf("%v out of %v passed", successes, len(cases))
 }
