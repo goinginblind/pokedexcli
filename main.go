@@ -63,6 +63,11 @@ func init() {
 		description: "Get next locations",
 		callback:    printNextMapPage,
 	}
+	commands["mapb"] = cliCommand{
+		name:        "mapb",
+		description: "Get previous locations",
+		callback:    printPrevMapPage,
+	}
 }
 
 // their functions
@@ -98,13 +103,44 @@ func printNextMapPage(inp *config) error {
 	}
 	res, err := http.Get(fetchUrl)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get response body: %v", err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %v", res.StatusCode)
 	}
+
+	var decodedRes LocationAreaResponse
+	err = json.NewDecoder(res.Body).Decode(&decodedRes)
+	if err != nil {
+		return fmt.Errorf("could not decode response: %v", err)
+	}
+
+	for _, entry := range decodedRes.Results {
+		fmt.Println(entry.Name)
+	}
+
+	inp.Next = decodedRes.Next
+	inp.Previous = decodedRes.Previous
+
+	return nil
+}
+
+func printPrevMapPage(inp *config) error {
+	var fetchUrl string
+	if inp.Previous == "" {
+		fmt.Println("you're on the first page")
+		return nil
+	} else {
+		fetchUrl = inp.Previous
+	}
+
+	res, err := http.Get(fetchUrl)
+	if err != nil {
+		return fmt.Errorf("could not get response body: %v", err)
+	}
+	defer res.Body.Close()
 
 	var decodedRes LocationAreaResponse
 	err = json.NewDecoder(res.Body).Decode(&decodedRes)
