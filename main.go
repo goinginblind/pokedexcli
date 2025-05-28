@@ -11,6 +11,7 @@ import (
 
 func main() {
 	scan := bufio.NewScanner(os.Stdin)
+	conf := config{}
 	for {
 		fmt.Print("Pokedex > ")
 		scan.Scan()
@@ -23,7 +24,7 @@ func main() {
 		strSlice := CleanInput(gotString)
 		prompt := strSlice[0]
 		if command, ok := commands[prompt]; ok {
-			err := command.callback()
+			err := command.callback(&conf)
 			fmt.Println(err)
 		} else {
 			fmt.Println("Unknown command")
@@ -41,7 +42,7 @@ func CleanInput(text string) []string {
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(*config) error
 }
 
 var commands = map[string]cliCommand{}
@@ -65,13 +66,13 @@ func init() {
 }
 
 // their functions
-func commandExit() error {
+func commandExit(inp *config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp() error {
+func commandHelp(inp *config) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println()
@@ -88,8 +89,14 @@ type config struct {
 	Previous string
 }
 
-func printNextMapPage() error {
-	res, err := http.Get("https://pokeapi.co/api/v2/location-area/")
+func printNextMapPage(inp *config) error {
+	var fetchUrl string
+	if inp.Next == "" {
+		fetchUrl = "https://pokeapi.co/api/v2/location-area/"
+	} else {
+		fetchUrl = inp.Next
+	}
+	res, err := http.Get(fetchUrl)
 	if err != nil {
 		return err
 	}
@@ -108,6 +115,9 @@ func printNextMapPage() error {
 	for _, entry := range decodedRes.Results {
 		fmt.Println(entry.Name)
 	}
+
+	inp.Next = decodedRes.Next
+	inp.Previous = decodedRes.Previous
 
 	return nil
 }
