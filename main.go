@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -29,11 +31,13 @@ func main() {
 	}
 }
 
+// Regular functions for main
 func CleanInput(text string) []string {
 	text = strings.ToLower(text)
 	return strings.Fields(text)
 }
 
+// Command and registry for them
 type cliCommand struct {
 	name        string
 	description string
@@ -53,8 +57,14 @@ func init() {
 		description: "Exit the Pokedex",
 		callback:    commandExit,
 	}
+	commands["map"] = cliCommand{
+		name:        "map",
+		description: "Get next locations",
+		callback:    printNextMapPage,
+	}
 }
 
+// their functions
 func commandExit() error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
@@ -69,5 +79,35 @@ func commandHelp() error {
 	for _, cmd := range commands {
 		fmt.Printf("%s: %s\n", cmd.name, cmd.description)
 	}
+	return nil
+}
+
+// map functionality
+type config struct {
+	Next     string
+	Previous string
+}
+
+func printNextMapPage() error {
+	res, err := http.Get("https://pokeapi.co/api/v2/location-area/")
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %v", res.StatusCode)
+	}
+
+	var decodedRes LocationAreaResponse
+	err = json.NewDecoder(res.Body).Decode(&decodedRes)
+	if err != nil {
+		return fmt.Errorf("could not decode response: %v", err)
+	}
+
+	for _, entry := range decodedRes.Results {
+		fmt.Println(entry.Name)
+	}
+
 	return nil
 }
