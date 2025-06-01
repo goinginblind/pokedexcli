@@ -24,8 +24,9 @@ func main() {
 		strSlice := CleanInput(gotString)
 		prompt := strSlice[0]
 		if command, ok := commands[prompt]; ok {
-			err := command.callback(&conf)
-			fmt.Println(err)
+			if err := command.callback(&conf); err != nil {
+				fmt.Println(err)
+			}
 		} else {
 			fmt.Println("Unknown command")
 		}
