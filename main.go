@@ -2,16 +2,22 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/goinginblind/pokedexcli/internal/pokeapi"
+	"github.com/goinginblind/pokedexcli/internal/pokecache"
 )
+
+var cache *pokecache.Cache
 
 func main() {
 	scan := bufio.NewScanner(os.Stdin)
 	conf := config{}
+	cache = pokecache.NewCache(100 * time.Second)
 	for {
 		fmt.Print("Pokedex > ")
 		scan.Scan()
@@ -99,49 +105,74 @@ type config struct {
 
 // print next page
 func printNextMapPage(inp *config) error {
-	var fetchUrl string
+	var url string
 	if inp.Next == "" {
-		fetchUrl = "https://pokeapi.co/api/v2/location-area/"
+		url = "https://pokeapi.co/api/v2/location-area/"
 	} else {
-		fetchUrl = inp.Next
+		url = inp.Next
 	}
 
-	decodedRes, err := pokeapi.FetchLocRes(fetchUrl)
+	res, err := fetchOrCache(url)
 	if err != nil {
-		return fmt.Errorf("%v: could not fetch a response", err)
+		return err
 	}
 
-	for _, entry := range decodedRes.Results {
+	for _, entry := range res.Results {
 		fmt.Println(entry.Name)
 	}
 
-	inp.Next = decodedRes.Next
-	inp.Previous = decodedRes.Previous
+	inp.Next = res.Next
+	inp.Previous = res.Previous
 
 	return nil
 }
 
 // print prev page
 func printPrevMapPage(inp *config) error {
-	var fetchUrl string
+	var url string
 	if inp.Previous == "" {
 		fmt.Println("you're on the first page")
 		return nil
 	} else {
-		fetchUrl = inp.Previous
+		url = inp.Previous
 	}
 
-	decodedRes, err := pokeapi.FetchLocRes(fetchUrl)
+	res, err := fetchOrCache(url)
 	if err != nil {
-		return fmt.Errorf("%v: could not fetch a response", err)
+		return err
 	}
 
-	for _, entry := range decodedRes.Results {
+	for _, entry := range res.Results {
 		fmt.Println(entry.Name)
 	}
 
-	inp.Next = decodedRes.Next
-	inp.Previous = decodedRes.Previous
+	inp.Next = res.Next
+	inp.Previous = res.Previous
 
 	return nil
+}
+
+func fetchOrCache(url string) (pokeapi.LocationAreaResponse, error) {
+	var res pokeapi.LocationAreaResponse
+	// check cache
+	if raw, ok := cache.Get(url); ok {
+		err := json.Unmarshal(raw, &res)
+		if err != nil {
+			return res, fmt.Errorf("%v: could not decode a response from cache", err)
+		}
+		// or fetch it from the url and then cache it
+	} else {
+		fetched, err := pokeapi.FetchLocRes(url)
+		if err != nil {
+			return res, fmt.Errorf("%v: could not fetch a response", err)
+		}
+
+		raw, err := json.Marshal(fetched)
+		if err != nil {
+			return res, fmt.Errorf("%v: could not marshal cache entry", err)
+		}
+		cache.Add(url, raw)
+		res = *fetched
+	}
+	return res, nil
 }
