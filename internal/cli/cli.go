@@ -20,16 +20,17 @@ func Run() {
 	for {
 		fmt.Print("Pokedex > ")
 		scan.Scan()
-		gotString := scan.Text()
+		userInput := scan.Text()
 
-		if gotString == "" {
+		parts := cleanInput(userInput)
+		if len(parts) == 0 {
 			continue
 		}
 
-		strSlice := cleanInput(gotString)
-		prompt := strSlice[0]
-		if command, ok := commands[prompt]; ok {
-			if err := command.callback(cfg); err != nil {
+		commandPrompt := parts[0]
+		args := parts[1:]
+		if command, ok := commands[commandPrompt]; ok {
+			if err := command.callback(cfg, args); err != nil {
 				fmt.Println(err)
 			}
 		} else {
@@ -67,5 +68,10 @@ func init() {
 		name:        "mapb",
 		description: "Get previous locations",
 		callback:    printPrevMapPage,
+	}
+	commands["explore"] = CliCommand{
+		name:        "explore",
+		description: "Get pokemon list for a location",
+		callback:    commandExplore,
 	}
 }
