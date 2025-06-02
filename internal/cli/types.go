@@ -1,13 +1,15 @@
 package cli
 
 import (
+	"github.com/goinginblind/pokedexcli/internal/pokeapi"
 	"github.com/goinginblind/pokedexcli/internal/pokecache"
 )
 
-// Config contains 'Next' and 'Previous' fields with URLs, and 'Cache' with map pages (for now)
+// Config contains 'Next' and 'Previous' fields with URLs, and 'Cache' (for now)
 type Config struct {
 	Next     string
 	Previous string
+	Caught   map[string]pokeapi.Pokemon
 	Cache    *pokecache.Cache
 }
 

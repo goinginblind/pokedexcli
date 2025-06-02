@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goinginblind/pokedexcli/internal/pokeapi"
 	"github.com/goinginblind/pokedexcli/internal/pokecache"
 )
 
@@ -15,7 +16,8 @@ var cache *pokecache.Cache
 // Runs the infinite loop until the user uses the 'quit' command as standard input
 func Run() {
 	cache = pokecache.NewCache(time.Duration(5 * time.Minute))
-	cfg := &Config{Cache: cache}
+	caught := make(map[string]pokeapi.Pokemon)
+	cfg := &Config{Cache: cache, Caught: caught}
 	scan := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
@@ -73,5 +75,20 @@ func init() {
 		name:        "explore",
 		description: "Get pokemon list for a location",
 		callback:    commandExplore,
+	}
+	commands["catch"] = CliCommand{
+		name:        "catch",
+		description: "Throw a pokeball at a pokemon",
+		callback:    commandCatch,
+	}
+	commands["inspect"] = CliCommand{
+		name:        "inspect",
+		description: "Inspect caught pokemon",
+		callback:    commandInspect,
+	}
+	commands["pokedex"] = CliCommand{
+		name:        "pokedex",
+		description: "Shows all the pokemon you've caught",
+		callback:    commandPokedex,
 	}
 }
